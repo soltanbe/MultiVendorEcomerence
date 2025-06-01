@@ -58,49 +58,33 @@ class OrderProcessingService
             CustomHelper::log("❌ Failed to process Order #{$order->id}: " . $exception->getMessage(), 'error', $output);
         }
     }
+    public function notify(SubOrder $subOrder, int $customerId, int $vendorId): void
+    {
+        $subOrder = $subOrder->fresh(['items', 'order', 'vendor']);
+        $vendorData = Vendor::find($vendorId);
+        CustomHelper::log("Sending sub-orders for Customer #{$customerId} to Vendor #{$vendorId} name: {$vendorData->name} phone: {$vendorData->phone} email: {$vendorData->email}");
+        $msg = "Sending sub-orders to Vendor #{$vendorId} for Customer #{$customerId}\n";
 
-    public function notifyPendingSubOrders($pendingSubOrders, $output = null){
-        $grouped = $pendingSubOrders->groupBy(function ($subOrder) {
-            return $subOrder->order->customer_id;
-        });
-        foreach ($grouped as $customerId => $subOrdersForCustomer)
-        {
-            if($output){
-                $output->info("\n👤 Customer #{$customerId}");
-            }
-            $vendorGrouped = $subOrdersForCustomer->groupBy('vendor_id');
-            foreach ($vendorGrouped as $vendorId => $subOrders) {
-                $vendorData = Vendor::find($vendorId);
-                if($output){
-                    $output->info("Sending sub-orders to Vendor #{$vendorId} name: {$vendorData->name} phone: {$vendorData->phone} email: {$vendorData->email}");
-                }
-                CustomHelper::log("Sending sub-orders to Vendor #{$vendorId} name: {$vendorData->name} phone: {$vendorData->phone} email: {$vendorData->email}", 'info');
-                $msg = "Sending sub-orders to Vendor #{$vendorId} for Customer #{$customerId}\n";
-
-                foreach ($subOrders as $subOrder) {
-                    foreach ($subOrder->items as $item) {
-                        $productData = Product::find($item->product_id);
-                        $info = "SubOrder #{$item->sub_order_id} product_id #{$item->product_id} name {$productData->name} quantity {$item->quantity} unit price {$item->unit_price}";
-                        CustomHelper::log($info, 'info');
-                        $msg .= "$info\n";
-                    }
-                    CustomHelper::log("SubOrder #{$subOrder->id} (Order #{$subOrder->order_id}) - Total: ₪{$subOrder->total_amount}", 'info', $output);
-                    $msg .= "SubOrder #{$subOrder->id} (Order #{$subOrder->order_id}) - Total: ₪{$subOrder->total_amount}\n";
-                    $subOrder->update(['status' => 'notified']);
-                }
-
-                Notification::create([
-                    'sub_order_id' => $subOrder->id,
-                    'vendor_id' => $vendorId,
-                    'customer_id' => $customerId,
-                    'channel' => 'log',
-                    'message' => $msg,
-                    'notified_at' => now(),
-                ]);
-                if($output){
-                    $output->info("✅ Vendor #{$vendorId} notified with " . count($subOrders) . " sub-orders\n");
-                }
-            }
+        foreach ($subOrder->items as $item) {
+            $product = Product::find($item->product_id);
+            $line = "SubOrder #{$item->sub_order_id} product_id #{$item->product_id} name {$product->name} quantity {$item->quantity} unit price {$item->unit_price}";
+            CustomHelper::log($line);
+            $msg .= $line . "\n";
         }
+
+        $totalLine = "SubOrder #{$subOrder->id} (Order #{$subOrder->order_id}) - Total: ₪{$subOrder->total_amount}";
+        CustomHelper::log($totalLine);
+        $msg .= $totalLine;
+
+        $subOrder->update(['status' => 'notified']);
+
+        Notification::create([
+            'sub_order_id' => $subOrder->id,
+            'vendor_id' => $subOrder->vendor_id,
+            'customer_id' => $subOrder->order->customer_id,
+            'channel' => 'log',
+            'message' => $msg,
+            'notified_at' => now(),
+        ]);
     }
 }
