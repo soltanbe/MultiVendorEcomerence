@@ -12,6 +12,7 @@ class ArtisanConsoleController extends Controller
         'orders:random',
         'orders:process-pending',
         'orders:notify-vendors',
+        'schedule:list',
         'cache:clear',
         'route:clear',
     ];

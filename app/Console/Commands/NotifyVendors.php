@@ -2,10 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Notification;
-use App\Models\Product;
 use App\Models\SubOrder;
-use App\Models\Vendor;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
