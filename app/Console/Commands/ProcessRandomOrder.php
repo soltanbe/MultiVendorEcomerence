@@ -20,7 +20,7 @@ class ProcessRandomOrder extends Command
      *
      * @var string
      */
-    protected $signature = 'order:random {count=1 : Number of orders to process}';
+    protected $signature = 'orders:random {count=1 : Number of orders to process}';
 
     /**
      * The console command description.

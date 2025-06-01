@@ -14,7 +14,7 @@ services:
         depends_on:
             - mysql
             - redis
-
+        entrypoint: ["sh", "init.sh"]
     nginx:
         image: nginx:alpine
         container_name: nginx

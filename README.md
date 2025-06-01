@@ -61,21 +61,17 @@ cd MultiVendorEcomerence
 composer install
 npm install && npm run build
 
-Run migrations and seeders
-
+Run migrations and seeders or can reset the tables and data
 php artisan migrate:fresh --seed
 
-Generate random orders
+Generate random orders Process one or more random customer orders with random products and lowest vendor prices count parameter mean how math order create
+php artisan orders:random {count} 
 
-php artisan order:random {count}
-
-Process pending orders (split to vendors + apply discounts)
-
+Process pending orders (split to vendors + apply discounts Process pending orders and create sub-orders grouped by vendor)
 php artisan orders:process-pending
 
 Dispatch vendor notifications (queued jobs)
-
-php artisan sub-orders:notify-vendors
+php artisan orders:notify-vendors
 
 Sample Log Output
 [2025-06-01 10:23:13] local.INFO: Starting processing of 1 random order(s)

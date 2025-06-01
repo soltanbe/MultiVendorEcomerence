@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class NotifyVendors extends Command
 {
-    protected $signature = 'sub-orders:notify-vendors';
+    protected $signature = 'orders:notify-vendors';
 
     protected $description = 'Notify vendors about their pending sub-orders';
 
