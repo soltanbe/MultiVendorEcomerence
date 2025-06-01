@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
             $table->foreignId('vendor_id')->constrained()->onDelete('cascade');
             $table->decimal('total_amount', 10, 2)->default(0);
+            $table->decimal('total_amount_original', 10, 2)->default(0);
             $table->string('status')->default('pending');
             $table->timestamps();
         });

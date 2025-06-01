@@ -36,7 +36,7 @@ class ProcessRandomOrder extends Command
     public function handle()
     {
         $count = (int) $this->argument('count');
-
+        $rules = app('discount.rules');
         $this->info("\n Processing {$count} random order(s)...\n");
         Log::info("Starting processing of {$count} random order(s)");
         for ($i = 1; $i <= $count; $i++) {

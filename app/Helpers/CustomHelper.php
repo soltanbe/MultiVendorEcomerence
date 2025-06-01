@@ -6,17 +6,17 @@ use Illuminate\Support\Facades\Log;
 
 class CustomHelper
 {
-    public static function log($msg, $type = "info", $output = null): void
+    public static function log($msg, $type = "info", $data = [] , $output = null): void
     {
         switch ($type){
             case "error":
-                Log::error($msg);
+                Log::error($msg, $data);
                 break;
             case "warn":
-                Log::warning($msg);
+                Log::warning($msg, $data);
                 break;
             default:
-                Log::info($msg);
+                Log::info($msg, $data);
                 break;
         }
         if ($output) {

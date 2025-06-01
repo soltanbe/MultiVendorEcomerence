@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SubOrder extends Model
 {
-    protected $fillable = ['order_id', 'vendor_id', 'total_amount', 'status'];
+    protected $fillable = ['order_id', 'vendor_id', 'total_amount', 'total_amount_original','status'];
     protected $table = 'sub_orders';
     public function order()
     {

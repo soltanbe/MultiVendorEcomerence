@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $fillable = ['name', 'image' , 'description'];
+    protected $fillable = ['name', 'category_id' , 'description'];
     protected $table = 'products';
     public function vendors()
     {
@@ -26,5 +26,9 @@ class Product extends Model
 
     public static function getRandomData($count){
         return self::inRandomOrder()->take($count)->get();
+    }
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 }
