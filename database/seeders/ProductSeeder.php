@@ -2,14 +2,26 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Category;
+use Illuminate\Support\Facades\Hash;
 
 class ProductSeeder extends Seeder
 {
     public function run(): void
     {
+        $user = User::create([
+            'name' => 'soltan',
+            'email' => 'soltanbe@gmail.com',
+            'password' => Hash::make(env('GENERAL_PASSWORD')),
+        ]);
+        $user = User::create([
+            'name' => 'savion',
+            'email' => 'savion@gmail.com',
+            'password' => Hash::make(env('GENERAL_PASSWORD')),
+        ]);
         $products = [
             // Electronics
             ['name' => 'Laptop',     'category' => 'electronics', 'description' => 'High-performance laptop for professionals.'],
