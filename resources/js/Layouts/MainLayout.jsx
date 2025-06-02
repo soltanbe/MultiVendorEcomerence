@@ -1,16 +1,27 @@
 import React from 'react';
-import { AppBar, Box, CssBaseline, Divider, Drawer, IconButton, List, ListItem, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material';
+import {
+    AppBar,
+    Box,
+    CssBaseline,
+    Divider,
+    Drawer,
+    IconButton,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText,
+    Toolbar,
+    Typography
+} from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import StoreIcon from '@mui/icons-material/Store';
-import { usePage } from '@inertiajs/react';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { router } from '@inertiajs/react';
 
 const drawerWidth = 240;
 
 const MainLayout = ({ children }) => {
     const [mobileOpen, setMobileOpen] = React.useState(false);
-    const { url } = usePage();
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -24,15 +35,35 @@ const MainLayout = ({ children }) => {
             <Divider />
             <List>
                 {[
-                    { text: 'Dashboard', icon: <DashboardIcon />, link: '/dashboard' },
-                    { text: 'Products', icon: <InventoryIcon />, link: '/products' },
-                    { text: 'Vendors', icon: <StoreIcon />, link: '/vendors' },
+                    { text: 'Console', icon: <DashboardIcon />, link: '/console' },
                 ].map((item) => (
-                    <ListItem button key={item.text} onClick={() => window.location.href = item.link}>
+                    <ListItem
+                        button
+                        key={item.text}
+                        onClick={() => window.location.href = item.link}
+                    >
                         <ListItemIcon>{item.icon}</ListItemIcon>
                         <ListItemText primary={item.text} />
                     </ListItem>
                 ))}
+
+                <ListItem
+                    button
+                    component="a"
+                    href="/telescope"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    <ListItemIcon>
+                        <DashboardIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Telescope" />
+                </ListItem>
+                <ListItem button onClick={() => router.post('/logout')}>
+                    <ListItemIcon><LogoutIcon /></ListItemIcon>
+                    <ListItemText primary="Logout" />
+                </ListItem>
+
             </List>
         </div>
     );
@@ -44,22 +75,35 @@ const MainLayout = ({ children }) => {
             {/* Top AppBar */}
             <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
-                    <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
+                    <IconButton
+                        color="inherit"
+                        edge="start"
+                        onClick={handleDrawerToggle}
+                        sx={{ mr: 2 }}
+                    >
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h6" noWrap component="div">
+                    <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
                         MultiVendor System
                     </Typography>
+
+                    {/* Logout button in top bar */}
+                    <IconButton color="inherit" onClick={() => router.post('/logout')}>
+                        <LogoutIcon />
+                    </IconButton>
                 </Toolbar>
             </AppBar>
 
-            {/* Sidebar */}
+            {/* Sidebar Drawer */}
             <Drawer
                 variant="permanent"
                 sx={{
                     width: drawerWidth,
                     flexShrink: 0,
-                    [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+                    [`& .MuiDrawer-paper`]: {
+                        width: drawerWidth,
+                        boxSizing: 'border-box'
+                    },
                 }}
             >
                 {drawer}
@@ -68,7 +112,12 @@ const MainLayout = ({ children }) => {
             {/* Main Content */}
             <Box
                 component="main"
-                sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3, ml: `${drawerWidth}px` }}
+                sx={{
+                    flexGrow: 1,
+                    bgcolor: 'background.default',
+                    p: 3,
+                    ml: `${drawerWidth}px`
+                }}
             >
                 <Toolbar />
                 {children}
