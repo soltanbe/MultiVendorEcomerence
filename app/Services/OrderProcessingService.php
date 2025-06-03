@@ -11,6 +11,7 @@ use App\Models\SubOrder;
 use App\Models\SubOrderItem;
 use App\Models\Vendor;
 use Illuminate\Support\Facades\DB;
+use App\Models\AppliedDiscount;
 
 class OrderProcessingService
 {
@@ -20,26 +21,35 @@ class OrderProcessingService
         try {
             $itemsByVendor = [];
             $discountRules = app('discount.rules');
+            $appliedRules = [];
             foreach ($order->items as $item) {
                 $vendorPrice = ProductVendor::getBestPriceFromVendors($item->product_id);
+
                 if (!$vendorPrice) {
                     if ($output) $output->warn("No vendor found for Product #{$item->product_id}");
                     CustomHelper::log("No vendor found for Product #{$item->product_id}", 'warn');
                     continue;
                 }
                 $product = Product::find($item->product_id);
-                $customer = $order->customer;
-                $discount = 0;
-                foreach ($discountRules as $rule) {
-                    $discount += $rule->apply($product, $customer, $item->quantity);
-                }
-                $discount = min($discount, 0.5);
-                $finalPrice = round($vendorPrice->price * (1 - $discount), 2);
 
-                if ($output) {
-                    $output->info("Product #{$product->id} base: ₪{$vendorPrice->price} discount: " . ($discount * 100) . "% → final: ₪{$finalPrice}");
+                $customer = $order->customer;
+                $totalDiscount = 0;
+
+                foreach ($discountRules as $rule) {
+                    $ruleApplications = $rule->apply($product, $customer, $item->quantity, $vendorPrice->vendor_id, $order->id);
+                    foreach ($ruleApplications as $application) {
+                        $totalDiscount += $application['amount'];
+                        $appliedRules[] = $application;
+                    }
                 }
-                CustomHelper::log("Product #{$product->id} base: ₪{$vendorPrice->price} discount: " . ($discount * 100) . "% → final: ₪{$finalPrice}", 'info');
+
+
+                $totalDiscount = min($totalDiscount, 0.5);
+                $finalPrice = round($vendorPrice->price * (1 - $totalDiscount), 2);
+                if ($output) {
+                    $output->info("Product #{$product->id} base: ₪{$vendorPrice->price} discount: " . ($totalDiscount * 100) . "% → final: ₪{$finalPrice}");
+                }
+                CustomHelper::log("Product #{$product->id} base: ₪{$vendorPrice->price} discount: " . ($totalDiscount * 100) . "% → final: ₪{$finalPrice}", 'info');
                 $itemsByVendor[$vendorPrice->vendor_id][] = [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
@@ -64,7 +74,7 @@ class OrderProcessingService
                 CustomHelper::log("✅ Created SubOrder #{$subOrder->id} for Vendor #{$vendorId} (Order #{$order->id})", 'info', [], $output);
 
                 foreach ($items as $item) {
-                    SubOrderItem::create([
+                    $subOrderItem = SubOrderItem::create([
                         'sub_order_id' => $subOrder->id,
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
@@ -72,6 +82,13 @@ class OrderProcessingService
                         'unit_price_original' => $item['original_price'],
                         'discount_amount' => $item['original_price'] - $item['price'],
                     ]);
+                    foreach ($appliedRules as $rule) {
+                        AppliedDiscount::create([
+                            'sub_order_item_id' => $subOrderItem->id,
+                            'discount_rule_id' => $rule['rule_id'],
+                            'amount' => $rule['amount'],
+                        ]);
+                    }
                     $product = Product::find($item['product_id']);
                     CustomHelper::log(
                         "🧾 SubOrderItem created: {$product->name} (ID #{$product->id}) | Qty: {$item['quantity']} | Original: ₪{$item['original_price']} | Discounted: ₪{$item['price']} | Discount: ₪" . ($item['original_price'] - $item['price']),

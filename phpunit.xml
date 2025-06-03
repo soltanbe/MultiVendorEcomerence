@@ -15,16 +15,8 @@
     </testsuites>
 
     <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="CACHE_DRIVER" value="array"/>
-        <env name="SESSION_DRIVER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
 
-        <!-- Use MySQL -->
-        <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_DATABASE" value="multiVendorsTest"/>
-        <env name="DB_USERNAME" value=""/>
-        <env name="DB_PASSWORD" value=""/>
+
+
     </php>
 </phpunit>
-w

@@ -6,5 +6,5 @@ use App\Models\Customer;
 
 interface DiscountRuleInterface
 {
-    public function apply(Product $product, Customer $customer, int $quantity): float;
+    public function apply(Product $product, Customer $customer, int $quantity, int $vendorId, int $orderId): array;
 }

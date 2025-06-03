@@ -6,12 +6,18 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ArtisanConsoleController;
 
 Route::middleware(['web'])->group(function () {
-    Route::get('/login', [LoginController::class, 'show']);
+    Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
+
 });
 Route::middleware(['auth'])->group(function () {
+    Route::get('/', function () {
+        return redirect('/console');
+    });
     Route::get('/console', fn () => Inertia::render('ArtisanConsole'))->name('console');
     Route::get('/console/commands', [ArtisanConsoleController::class, 'list']);
     Route::post('/console/run', [ArtisanConsoleController::class, 'run']);
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 });
+
+

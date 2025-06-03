@@ -43,7 +43,7 @@ class DiscountRulesSeeder extends Seeder
             [
                 'type' => 'loyalty',
                 'target' => null,
-                'min_quantity' => null,
+                'min_quantity' => 3,
                 'discount_percent' => 5.00,
                 'active' => true,
                 'created_at' => Carbon::now(),

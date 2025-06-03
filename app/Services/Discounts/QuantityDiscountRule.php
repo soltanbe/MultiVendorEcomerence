@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Discounts;
 
 use App\Helpers\CustomHelper;
@@ -8,17 +9,21 @@ use App\Models\DiscountRules;
 
 class QuantityDiscountRule implements DiscountRuleInterface
 {
-    public function apply(Product $product, Customer $customer, int $quantity): float
+    public function apply(Product $product, Customer $customer, int $quantity, int $vendorId, int $orderId): array
     {
-        $applicableDiscounts = DiscountRules::where('type', 'quantity')
+        $discounts = DiscountRules::where('type', 'quantity')
             ->where('active', true)
             ->where('min_quantity', '<=', $quantity)
             ->get();
 
-        $totalDiscount = 0;
+        $applied = [];
 
-        foreach ($applicableDiscounts as $discount) {
-            $totalDiscount += $discount->discount_percent / 100;
+        foreach ($discounts as $discount) {
+            $applied[] = [
+                'rule_id' => $discount->id,
+                'amount' => $discount->discount_percent / 100,
+            ];
+
             CustomHelper::log("📦 Quantity discount found", 'info', [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
@@ -28,6 +33,6 @@ class QuantityDiscountRule implements DiscountRuleInterface
             ]);
         }
 
-        return min($totalDiscount, 0.5);
+        return $applied;
     }
 }
