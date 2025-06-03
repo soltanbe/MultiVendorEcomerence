@@ -81,3 +81,4 @@ export default function Login() {
         </Container>
     );
 }
+Login.layout = (page) => page;

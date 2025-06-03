@@ -9,20 +9,29 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Alert,
+    Container
 } from '@mui/material';
 import axios from 'axios';
 
 const ArtisanConsole = () => {
     const [commands, setCommands] = useState([]);
     const [selected, setSelected] = useState('');
+    const [description, setDescription] = useState('');
     const [output, setOutput] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         axios.get('/console/commands').then(res => {
-            setCommands(res.data.commands);
+            setCommands(res.data.commands); // [{name, description}]
         });
     }, []);
+
+    const handleSelect = (value) => {
+        setSelected(value);
+        const cmd = commands.find(c => c.name === value);
+        setDescription(cmd?.description || '');
+    };
 
     const runCommand = async () => {
         if (!selected) return;
@@ -38,28 +47,62 @@ const ArtisanConsole = () => {
     };
 
     return (
-        <Box>
-            <Typography variant="h5" gutterBottom>Laravel Artisan Console</Typography>
+        <Container maxWidth="md" sx={{ mt: 6 }}>
+            <Paper elevation={4} sx={{ p: 4, borderRadius: 3 }}>
+                <Typography variant="h5" gutterBottom>
+                    🛠 Laravel Artisan Console
+                </Typography>
 
-            <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Select a Command</InputLabel>
-                <Select value={selected} onChange={(e) => setSelected(e.target.value)}>
-                    {commands.map((cmd) => (
-                        <MenuItem key={cmd} value={cmd}>{cmd}</MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>Select a Command</InputLabel>
+                    <Select
+                        value={selected}
+                        onChange={(e) => handleSelect(e.target.value)}
+                        label="Select a Command"
+                    >
+                        {commands.map((cmd) => (
+                            <MenuItem
+                                key={cmd.name}
+                                value={cmd.name}
+                                title={cmd.description} // This is the replacement for Tooltip
+                            >
+                                {cmd.name}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
 
-            <Button variant="contained" onClick={runCommand} disabled={loading || !selected}>
-                {loading ? 'Running...' : 'Run Command'}
-            </Button>
+                {description && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        {description}
+                    </Alert>
+                )}
 
-            {output && (
-                <Paper elevation={3} sx={{ mt: 3, p: 2, whiteSpace: 'pre-wrap', background: '#111', color: '#0f0' }}>
-                    {output}
-                </Paper>
-            )}
-        </Box>
+                <Button
+                    variant="contained"
+                    onClick={runCommand}
+                    disabled={loading || !selected}
+                    sx={{ mb: 3 }}
+                >
+                    {loading ? 'Running...' : 'Run Command'}
+                </Button>
+
+                {output && (
+                    <Paper
+                        elevation={3}
+                        sx={{
+                            p: 2,
+                            whiteSpace: 'pre-wrap',
+                            background: '#111',
+                            color: '#0f0',
+                            fontFamily: 'monospace',
+                        }}
+                    >
+                        {output}
+                    </Paper>
+                )}
+            </Paper>
+        </Container>
     );
 };
 

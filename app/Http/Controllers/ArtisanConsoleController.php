@@ -20,7 +20,15 @@ class ArtisanConsoleController extends Controller
     public function list()
     {
         return response()->json([
-            'commands' => $this->allowedCommands,
+            'commands' => [
+                ['name' => 'migrate:fresh --seed', 'description' => '🧼 Reset DB and seed again'],
+                ['name' => 'orders:random', 'description' => '📦 Create a random order for test'],
+                ['name' => 'orders:process-pending', 'description' => '🔁 Process pending sub-orders by vendor and find the discounts'],
+                ['name' => 'orders:notify-vendors', 'description' => '📨 Notify to vendors the suborders'],
+                ['name' => 'schedule:list', 'description' => '📅 List scheduled commands'],
+                ['name' => 'cache:clear', 'description' => '🧹 Clear Laravel cache'],
+                ['name' => 'route:clear', 'description' => '🚧 Clear route cache'],
+            ],
         ]);
     }
 
