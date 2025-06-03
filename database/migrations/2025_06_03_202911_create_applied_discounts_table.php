@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('sub_order_item_id');
             $table->unsignedBigInteger('discount_rule_id');
-            $table->float('amount'); // למשל 0.2 = 20%
+            $table->float('amount');
             $table->timestamps();
 
             $table->foreign('sub_order_item_id')->references('id')->on('sub_order_items')->onDelete('cascade');
