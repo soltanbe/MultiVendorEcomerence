@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DiscountRule extends Model
+class DiscountRules extends Model
 {
     protected $table = 'discount_rules';
 

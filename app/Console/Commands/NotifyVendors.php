@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Helpers\CustomHelper;
 use App\Models\SubOrder;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class NotifyVendors extends Command
 {
@@ -14,22 +14,24 @@ class NotifyVendors extends Command
 
     public function handle()
     {
-        $this->info("🔍 Fetching pending sub-orders...");
+        CustomHelper::log("🔍 Fetching pending sub-orders...", 'info', [], $this);
+
         $pendingSubOrders = SubOrder::where('status', 'pending')->with(['order','items','vendor'])->get();
         $grouped = $pendingSubOrders->groupBy(function ($subOrder) {
             return $subOrder->order->customer_id;
         });
+
         foreach ($grouped as $customerId => $subOrdersForCustomer) {
-            $this->info("\n👤 Customer #{$customerId}");
+            CustomHelper::log("\n👤 Customer #{$customerId}", 'info', [], $this);
+
             $vendorGrouped = $subOrdersForCustomer->groupBy('vendor_id');
             foreach ($vendorGrouped as $vendorId => $subOrders) {
                 foreach ($subOrders as $subOrder) {
-                    $msg = "Job is queued for Sending sub-orders to Vendor #{$vendorId} for Customer #{$customerId} SubOrder #{$subOrder->id}\n";
+                    $msg = "📤 Job queued: SubOrder #{$subOrder->id} to Vendor #{$vendorId} for Customer #{$customerId}";
                     \App\Jobs\NotifyVendorSubOrder::dispatch($subOrder, $vendorId, $customerId)->onQueue('notify-vendor-sub-order');
-                    $this->line($msg);
-                    Log::info($msg);
+                    CustomHelper::log($msg, 'info', [], $this);
                 }
-                $this->info("✅ Vendor #{$vendorId} notified with " . count($subOrders) . " sub-orders\n");
+                CustomHelper::log("✅ Vendor #{$vendorId} notified with " . count($subOrders) . " sub-orders", 'info', [], $this);
             }
         }
     }

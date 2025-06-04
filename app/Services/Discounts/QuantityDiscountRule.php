@@ -24,12 +24,17 @@ class QuantityDiscountRule implements DiscountRuleInterface
                 'amount' => $discount->discount_percent / 100,
             ];
 
-            CustomHelper::log("📦 Quantity discount found", 'info', [
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                'category' => $product->category->name,
-                'discount_percent' => $discount->discount_percent,
-                'rule_id' => $discount->id,
+            CustomHelper::log("📦 Quantity discount applied", 'info', [
+                'rule_id'        => $discount->id,
+                'discount_type'  => $discount->type,
+                'discount_value' => $discount->discount_percent . '%',
+                'product_id'     => $product->id,
+                'product_name'   => $product->name,
+                'category'       => optional($product->category)->name,
+                'customer_id'    => $customer->id,
+                'quantity'       => $quantity,
+                'vendor_id'      => $vendorId,
+                'order_id'       => $orderId,
             ]);
         }
 

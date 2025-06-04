@@ -14,7 +14,12 @@ class CategoryDiscountRule implements DiscountRuleInterface
         $applied = [];
 
         if (!$product->category) {
-            return $applied; // []
+            CustomHelper::log("⚠️ Skipping category discount — Product #{$product->id} has no category.", 'warn', [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'order_id' => $orderId,
+            ]);
+            return $applied;
         }
 
         $discounts = DiscountRules::where('type', 'category')
@@ -30,12 +35,15 @@ class CategoryDiscountRule implements DiscountRuleInterface
                 'amount' => $amount,
             ];
 
-            CustomHelper::log("📦 Category discount found", 'info', [
+            CustomHelper::log("🏷️ Category discount applied", 'info', [
+                'rule_id' => $discount->id,
+                'discount_type' => $discount->type,
+                'discount_value' => "{$discount->discount_percent}%",
+                'category_name' => $product->category->name,
                 'product_id' => $product->id,
                 'product_name' => $product->name,
-                'category' => $product->category->name,
-                'discount_percent' => $discount->discount_percent,
-                'rule_id' => $discount->id,
+                'vendor_id' => $vendorId,
+                'order_id' => $orderId,
             ]);
         }
 

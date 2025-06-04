@@ -21,27 +21,27 @@ class LoyaltyCustomerDiscountRule implements DiscountRuleInterface
 
         foreach ($discounts as $discount) {
             if ($orderCount >= $discount->min_quantity) {
-                $this->logDiscount($product, $customer, $discount, $orderCount);
                 $applied[] = [
                     'rule_id' => $discount->id,
                     'amount' => $discount->discount_percent / 100,
                 ];
+
+                CustomHelper::log("🎁 Loyalty discount applied", 'info', [
+                    'rule_id'          => $discount->id,
+                    'discount_type'    => $discount->type,
+                    'discount_value'   => $discount->discount_percent . '%',
+                    'min_required'     => $discount->min_quantity,
+                    'customer_id'      => $customer->id,
+                    'customer_name'    => $customer->name,
+                    'order_count'      => $orderCount,
+                    'product_id'       => $product->id,
+                    'product_name'     => $product->name,
+                    'vendor_id'        => $vendorId,
+                    'order_id'         => $orderId,
+                ]);
             }
         }
 
         return $applied;
-    }
-
-    private function logDiscount(Product $product, Customer $customer, DiscountRules $discount, int $orderCount): void
-    {
-        CustomHelper::log("📦 Loyalty discount applied", 'info', [
-            'product_id' => $product->id,
-            'product_name' => $product->name,
-            'customer' => $customer->name,
-            'order_count' => $orderCount,
-            'min_required' => $discount->min_quantity,
-            'discount_percent' => $discount->discount_percent,
-            'rule_id' => $discount->id,
-        ]);
     }
 }
