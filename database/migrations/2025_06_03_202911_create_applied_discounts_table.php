@@ -11,15 +11,19 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('applied_discounts', function ($table) {
+        Schema::create('applied_discounts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('sub_order_item_id');
-            $table->unsignedBigInteger('discount_rule_id');
+
+            $table->foreignId('sub_order_item_id')
+                ->constrained('sub_order_items')
+                ->onDelete('cascade');
+
+            $table->foreignId('discount_rule_id')
+                ->constrained('discount_rules')
+                ->onDelete('cascade');
+
             $table->float('amount');
             $table->timestamps();
-
-            $table->foreign('sub_order_item_id')->references('id')->on('sub_order_items')->onDelete('cascade');
-            $table->foreign('discount_rule_id')->references('id')->on('discount_rules')->onDelete('cascade');
         });
     }
 

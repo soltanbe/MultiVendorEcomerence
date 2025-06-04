@@ -1,91 +1,241 @@
-# 🛒 MultiVendorEcomerence — Laravel 12 Multi-Vendor Order System
 
-This project is a multi-vendor e-commerce order management system built with Laravel 12.
+# 🛒 MultiVendorEcomerence
 
-Each product can be listed by multiple vendors with different prices. When a customer places an order, the system dynamically:
-- Selects the lowest price per product from available vendors
-- Applies applicable discount rules based on product, category, quantity, or customer loyalty
-- Creates sub-orders grouped by vendor
-- Dispatches queued jobs to notify vendors
+**MultiVendorEcomerence** is a Laravel 12 e-commerce system that supports multiple vendors per product, automatic order splitting, dynamic pricing, and a flexible discount engine. It uses queued jobs to notify vendors and is built with a modular and testable architecture.
 
 ---
 
-## 🚀 Features
+## 📌 What the Project Does
 
-- 🛍️ Multi-vendor product listing (via `product_vendors`)
-- 💸 Dynamic pricing engine: best price per product
-- 🎯 Discount rule engine (Strategy Pattern via DB)
-- 📦 Automatic sub-order grouping by vendor
-- 📬 Queued notifications to vendors
-- 🧾 Full logging of order processing and discount application
+When a customer places an order with multiple products:
 
----
-
-## 🧱 Models Overview
-
-| Model             | Description                                     |
-|------------------|-------------------------------------------------|
-| Product           | Main product entity                            |
-| Vendor            | Each seller/vendor in the system               |
-| ProductVendor     | Pivot table for vendor-specific product prices |
-| Customer          | End user placing orders                        |
-| Order             | Main order placed by customer                  |
-| OrderItem         | Each product in the main order                 |
-| SubOrder          | Vendor-specific order                          |
-| SubOrderItem      | Products grouped under each vendor             |
-| DiscountRules     | Stores discount rules in DB                    |
-| Category          | Category assigned to each product              |
+1. The system selects the **lowest vendor price** per product.
+2. It **groups products by vendor** and creates **sub-orders**.
+3. It **dispatches jobs** to notify vendors of their sub-orders.
+4. It **applies dynamic discounts** based on:
+    - Quantity
+    - Product category
+    - Customer loyalty
+5. It logs all applied discounts for transparency and analysis.
+6. It tracks notifications sent to vendors.
 
 ---
 
-## 🧠 Discount Rule Engine
+## 🧱 Data Models
 
-### Stored in DB (`discounts` table)
-
-| Type      | Target          | Example                                       |
-|-----------|------------------|-----------------------------------------------|
-| category  | `electronics`     | 10% off all electronics                      |
-| quantity  | `min_quantity=3`  | 5% off when buying 3+ units                  |
-| loyalty   | N/A               | 5% off for loyal customers                   |
-
-All logic is loaded dynamically via the Strategy Pattern.
+| Model               | Description |
+|--------------------|-------------|
+| **User**            | Represents system users (if used for authentication). |
+| **Customer**        | A user who places orders. |
+| **Category**        | Categories to group products (used in discount rules). |
+| **Product**         | A product available for sale. Has many vendors and belongs to a category. |
+| **Vendor**          | A seller who provides products. |
+| **ProductVendor**   | Pivot table linking products and vendors. Includes `price`, `stock`. |
+| **Order**           | The main customer order. Linked to one customer and contains multiple `OrderItem`s. |
+| **OrderItem**       | Represents each item in the main order (product + quantity). |
+| **SubOrder**        | A vendor-specific part of an order. Belongs to one `Order`, one `Vendor`. |
+| **SubOrderItem**    | Items within a `SubOrder`. Belongs to one product. |
+| **AppliedDiscount** | Records each discount that was applied on a sub-order item. |
+| **DiscountRule**    | Stores reusable discount logic definitions (category, quantity, etc). |
+| **Notification**    | Represents a vendor notification sent for a sub-order. |
 
 ---
 
-## 📂 Cloning & Setup
+### 🔗 Model Relationships
+
+```
+Customer
+ └── hasMany(Order)
+Order
+ ├── hasMany(OrderItem)
+ ├── hasMany(SubOrder)
+ └── belongsTo(Customer)
+OrderItem
+ └── belongsTo(Product)
+Product
+ ├── belongsTo(Category)
+ ├── belongsToMany(Vendor) [via ProductVendor]
+ └── hasMany(OrderItem)
+SubOrder
+ ├── belongsTo(Order)
+ ├── belongsTo(Vendor)
+ ├── hasMany(SubOrderItem)
+ └── hasMany(Notification)
+SubOrderItem
+ ├── belongsTo(SubOrder)
+ ├── belongsTo(Product)
+ └── hasMany(AppliedDiscount)
+AppliedDiscount
+ ├── belongsTo(SubOrderItem)
+ └── belongsTo(DiscountRule)
+DiscountRule
+ └── hasMany(AppliedDiscount)
+Notification
+ ├── belongsTo(SubOrder)
+ └── belongsTo(Vendor)
+```
+
+---
+
+## ⚙️ OrderProcessingService
+
+Central service that handles all order logic:
+
+- Selects the best vendor price for each product.
+- Applies discount rules via strategy pattern.
+- Creates the main order + items.
+- Groups into sub-orders by vendor.
+- Dispatches `NotifyVendorJob` for each sub-order.
+- Records each applied discount.
+- Logs notifications in the `notifications` table.
+
+---
+
+
+## 🎯 Dynamic Discount Rule Engine
+
+The system uses the **Strategy Pattern** to dynamically apply multiple discount rules during order processing.
+
+Each rule implements the following interface:
+
+```php
+interface DiscountRuleInterface {
+    public function apply(Product $product, Customer $customer, int $quantity, int $vendorId, int $orderId): array;
+}
+```
+
+The `apply` method returns an array of applicable discounts, where each item is in the format:
+
+```php
+[
+    'rule_id' => <discount_rules.id>,
+    'amount' => <float between 0 and 1>, // e.g., 0.10 for 10%
+]
+
+Allow max Total Discounts 0.5 => 50%
+```
+
+### ✅ Implemented Rules:
+
+- **QuantityDiscountRule**  
+  Applies discounts for products where quantity exceeds a defined threshold (`min_quantity`).
+
+- **CategoryDiscountRule**  
+  Applies discounts based on the product's category name (`target` column).
+
+- **LoyaltyCustomerDiscountRule**  
+  Applies a discount if the customer has made a certain number of past orders (compared to `min_quantity`).
+
+Each rule logs debug info using `CustomHelper::log(...)` and matches only `active` rules from the `discount_rules` table.
+
+These rules are resolved dynamically from the service container under the key `discount.rules` and iterated in the `OrderProcessingService`.
+
+
+## 📬 Queued Jobs
+
+### `NotifyVendorJob`
+
+- Dispatched for each `SubOrder`.
+- Simulates sending an email/notification to the vendor.
+- Logs output in `storage/logs/laravel.log`.
+- Creates a new `Notification` record in the database.
+
+---
+
+## 🛠 Artisan Commands
+
+### Generate and Process Orders:
+
+```bash
+php artisan orders:generate-random
+php artisan orders:process-pending
+php artisan migrate:fresh --seed
+php artisan user:create
+                            {name : The name of the user}
+                            {email : The email of the user}
+                            {password : The password for the user}
+```
+- `user:create`: Create a new user via CLI.
+- `php artisan migrate:fresh --seed`: Restart All Migrations with build Random Data.
+- `generate-random`: Creates a random order with products.
+- `process-pending`: Processes pending orders and triggers jobs.
+
+
+---
+
+## 🧪 Testing
+
+Run:
+
+```bash
+php artisan test
+```
+
+Includes tests for:
+
+- Order processing
+- Vendor grouping
+- Discount rule application
+- Job dispatch verification
+- Applied discount records
+- Notification creation
+
+---
+
+## ▶️ Getting Started
 
 ```bash
 git clone https://github.com/soltanbe/MultiVendorEcomerence.git
 cd MultiVendorEcomerence
-
 composer install
-npm install && npm run build
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan queue:work
+```
 
-Run migrations and seeders or can reset the tables and data
-php artisan migrate:fresh --seed
+---
 
-Generate random orders Process one or more random customer orders with random products and lowest vendor prices count parameter mean how math order create
-php artisan orders:random {count} 
+## 🧠 Tech Stack
 
-Process pending orders (split to vendors + apply discounts Process pending orders and create sub-orders grouped by vendor)
-php artisan orders:process-pending
+- Laravel 12
+- PHP 8.2+
+- MySQL
+- Queues and Jobs
+- Eloquent ORM
+- Inertia.js (React Frontend)
+- Strategy Pattern for Discounts
 
-Dispatch vendor notifications (queued jobs)
-php artisan orders:notify-vendors
+---
 
-Sample Log Output
-[2025-06-01 10:23:13] local.INFO: Starting processing of 1 random order(s)
-[2025-06-01 10:23:13] local.INFO: Processing Order #1
-[2025-06-01 10:23:13] local.INFO: Selected customer: 3 - Amit (amit@example.com)
-[2025-06-01 10:23:13] local.INFO: Pulled product from DB: ID 23, Name: Bed Frame
-[2025-06-01 10:23:13] local.INFO: Created order ID: 1
-[2025-06-01 10:23:13] local.INFO: Saved OrderItem ID: 1 - Product #23 (Qty: 3, Price: ₪87.00) via Vendor #3
-[2025-06-01 10:23:21] local.INFO: 📦 Quantity discount found {"product_id":23,"product_name":"Bed Frame","category":"furniture","discount_percent":"7.50","rule_id":3}
-[2025-06-01 10:23:21] local.INFO: Product #23 base: ₪87.00 discount: 7.5% → final: ₪80.48
-[2025-06-01 10:23:21] local.INFO: ✅ Created SubOrder #1 for Vendor #3 (Order #1)
-[2025-06-01 10:23:21] local.INFO: 🧾 SubOrderItem created: Bed Frame (ID #23) | Qty: 3 | Original: ₪87.00 | Discounted: ₪80.48 | Discount: ₪6.52
-[2025-06-01 10:23:28] local.INFO: Job is queued for Sending sub-orders to Vendor #3 for Customer #3 SubOrder #1
+## 👤 Author
 
-[2025-06-01 10:23:29] local.INFO: Sending sub-orders for Customer #3 to Vendor #3 name: Vendor C phone: 050-3333333 email: vendorc@example.com
-[2025-06-01 10:23:29] local.INFO: SubOrder #1 product_id #23 name Bed Frame quantity 3 unit price original 87.00 unit price 80.48
-[2025-06-01 10:23:29] local.INFO: SubOrder #1 (Order #1) - Total original: ₪261.00  Total: ₪241.44
+Developed with ❤️ by [Soltan B](https://github.com/soltanbe)
+
+---
+
+
+---
+
+## 🔐 Authentication and Console Interface
+
+The system includes a basic authentication flow:
+
+- **User login** via email and password.
+- After login, users are redirected to the **/console** route.
+
+### 🖥️ Console Interface
+
+The `/console` route displays a **React + Inertia.js** based interface that allows:
+
+- Running predefined **Artisan commands** from the browser.
+- Viewing the **output of each command** in real time.
+- A clean **developer console-style UI** built with Material UI (MUI).
+
+This interface is useful for developers or admins to interact with Laravel internals without SSH access.
+
+
+
+## 📄 License
+
+This project is open-sourced under the [MIT license](LICENSE).
