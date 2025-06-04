@@ -68,49 +68,47 @@ class OrderProcessingService
                 $msg = "[OrderProcessing] Order #{$order->id} | ❌ Failed — no vendors available for product(s): {$productList}";
                 if ($output) $output->error($msg);
                 CustomHelper::log($msg, 'error');
-                DB::rollBack();
                 return;
-            }
+            }else{
+                foreach ($itemsByVendor as $vendorId => $items) {
+                    $subTotalOriginal = collect($items)->sum(fn($item) => $item['original_price'] * $item['quantity']);
+                    $subTotalDiscount = collect($items)->sum(fn($item) => $item['price'] * $item['quantity']);
 
-            foreach ($itemsByVendor as $vendorId => $items) {
-                $subTotalOriginal = collect($items)->sum(fn($item) => $item['original_price'] * $item['quantity']);
-                $subTotalDiscount = collect($items)->sum(fn($item) => $item['price'] * $item['quantity']);
-
-                $subOrder = SubOrder::create([
-                    'order_id' => $order->id,
-                    'vendor_id' => $vendorId,
-                    'total_amount_original' => $subTotalOriginal,
-                    'total_amount' => $subTotalDiscount,
-                ]);
-
-                CustomHelper::log("[SubOrder] ✅ Created SubOrder #{$subOrder->id} for Vendor #{$vendorId} | Order #{$order->id}", 'info', [], $output);
-
-                foreach ($items as $item) {
-                    $subOrderItem = SubOrderItem::create([
-                        'sub_order_id' => $subOrder->id,
-                        'product_id' => $item['product_id'],
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $item['price'],
-                        'unit_price_original' => $item['original_price'],
-                        'discount_amount' => $item['original_price'] - $item['price'],
+                    $subOrder = SubOrder::create([
+                        'order_id' => $order->id,
+                        'vendor_id' => $vendorId,
+                        'total_amount_original' => $subTotalOriginal,
+                        'total_amount' => $subTotalDiscount,
                     ]);
 
-                    foreach ($appliedRules as $rule) {
-                        AppliedDiscount::create([
-                            'sub_order_item_id' => $subOrderItem->id,
-                            'discount_rule_id' => $rule['rule_id'],
-                            'amount' => $rule['amount'],
+                    CustomHelper::log("[SubOrder] ✅ Created SubOrder #{$subOrder->id} for Vendor #{$vendorId} | Order #{$order->id}", 'info', [], $output);
+
+                    foreach ($items as $item) {
+                        $subOrderItem = SubOrderItem::create([
+                            'sub_order_id' => $subOrder->id,
+                            'product_id' => $item['product_id'],
+                            'quantity' => $item['quantity'],
+                            'unit_price' => $item['price'],
+                            'unit_price_original' => $item['original_price'],
+                            'discount_amount' => $item['original_price'] - $item['price'],
                         ]);
+
+                        foreach ($appliedRules as $rule) {
+                            AppliedDiscount::create([
+                                'sub_order_item_id' => $subOrderItem->id,
+                                'discount_rule_id' => $rule['rule_id'],
+                                'amount' => $rule['amount'],
+                            ]);
+                        }
+
+                        $product = Product::find($item['product_id']);
+                        $discount = round($item['original_price'] - $item['price'], 2);
+                        $msg = "[SubOrderItem] SubOrder #{$subOrder->id} | Product: \"{$product->name}\" (ID #{$product->id}) | Qty: {$item['quantity']} | Price: ₪{$item['price']} | Original: ₪{$item['original_price']} | Discount: ₪{$discount}";
+                        CustomHelper::log($msg, 'info', [], $output);
                     }
-
-                    $product = Product::find($item['product_id']);
-                    $discount = round($item['original_price'] - $item['price'], 2);
-                    $msg = "[SubOrderItem] SubOrder #{$subOrder->id} | Product: \"{$product->name}\" (ID #{$product->id}) | Qty: {$item['quantity']} | Price: ₪{$item['price']} | Original: ₪{$item['original_price']} | Discount: ₪{$discount}";
-                    CustomHelper::log($msg, 'info', [], $output);
                 }
+                $order->update(['status' => 'processed']);
             }
-
-            $order->update(['status' => 'processed']);
             DB::commit();
         } catch (\Exception $exception) {
             DB::rollBack();
