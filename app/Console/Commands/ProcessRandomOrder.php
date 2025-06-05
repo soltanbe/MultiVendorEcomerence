@@ -7,7 +7,6 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\ProductVendor;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 

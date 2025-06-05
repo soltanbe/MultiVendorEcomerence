@@ -9,5 +9,7 @@ Artisan::command('inspire', function () {
 Schedule::command('orders:process-pending')->everyMinute();
 Schedule::command('orders:notify-vendors')->everyMinute();
 Schedule::command('queue:work --queue=notify-vendor-sub-order --tries=1 --daemon')->withoutOverlapping();
+Schedule::command('queue:work --queue=process-order --tries=1 --daemon')->withoutOverlapping();
+
 
 
