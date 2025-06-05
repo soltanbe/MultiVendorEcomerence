@@ -94,11 +94,17 @@ class OrderProcessingService
                         ]);
 
                         foreach ($appliedRules as $rule) {
-                            AppliedDiscount::create([
-                                'sub_order_item_id' => $subOrderItem->id,
-                                'discount_rule_id' => $rule['rule_id'],
-                                'amount' => $rule['amount'],
-                            ]);
+                            $alreadyApplied = AppliedDiscount::where('sub_order_item_id', $subOrderItem->id)
+                                ->where('discount_rule_id', $rule['rule_id'])
+                                ->exists();
+
+                            if (!$alreadyApplied) {
+                                AppliedDiscount::create([
+                                    'sub_order_item_id' => $subOrderItem->id,
+                                    'discount_rule_id' => $rule['rule_id'],
+                                    'amount' => $rule['amount'],
+                                ]);
+                            }
                         }
 
                         $product = Product::find($item['product_id']);
